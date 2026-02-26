@@ -1,3 +1,13 @@
+// 🔐 rustls MUST be installed before tokio runtime exists
+use rustls::crypto::ring;
+
+#[ctor::ctor]
+fn install_rustls_provider() {
+    ring::default_provider()
+        .install_default()
+        .expect("failed to install rustls ring provider");
+}
+
 mod config;
 mod market;
 mod monitor;
