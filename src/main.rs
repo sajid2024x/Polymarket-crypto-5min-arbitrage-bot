@@ -25,6 +25,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
+use crate::scalp::ScalpState;
 
 use polymarket_client_sdk::types::{Address, B256, U256};
 
