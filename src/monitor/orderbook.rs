@@ -99,6 +99,14 @@ impl OrderBookMonitor {
     /// 处理订单簿更新
     pub fn handle_book_update(&self, book: BookUpdate) -> Option<OrderBookPair> {
 
+        use std::collections::HashMap;
+use rust_decimal::Decimal;
+
+pub struct OrderBookMonitor {
+    // existing fields …
+    last_mid_price: HashMap<B256, Decimal>,
+}
+
         // 打印前5档买卖价格（用于调试）
         if !book.bids.is_empty() {
             let top_bids: Vec<String> = book.bids.iter()
