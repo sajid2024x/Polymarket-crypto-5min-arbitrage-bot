@@ -1,4 +1,3 @@
-// 🔐 rustls MUST be installed before tokio runtime exists
 use rustls::crypto::ring;
 
 #[ctor::ctor]
