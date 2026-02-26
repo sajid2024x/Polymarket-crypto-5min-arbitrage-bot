@@ -48,6 +48,7 @@ impl OrderBookMonitor {
             ws_client: WsClient::default(),
             books: DashMap::new(),
             market_map: HashMap::new(),
+            last_mid_price: HashMap::new(),
         }
     }
 
