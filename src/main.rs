@@ -5,86 +5,51 @@ mod risk;
 mod trading;
 mod utils;
 
-use poly_5min_bot::merge;
-use poly_5min_bot::positions::{get_positions, Position};
-
 use anyhow::Result;
-use dashmap::DashMap;
-use futures::StreamExt;
-use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
-use polymarket_client_sdk::types::{Address, B256, U256};
+use tracing::info;
 
 use crate::config::Config;
-use crate::market::{MarketDiscoverer, MarketInfo, MarketScheduler};
+use crate::market::{MarketDiscoverer, MarketScheduler};
 use crate::monitor::{ArbitrageDetector, OrderBookMonitor};
 use crate::risk::positions::PositionTracker;
 use crate::risk::{HedgeMonitor, PositionBalancer, RiskManager};
 use crate::trading::TradingExecutor;
 
-/// 从持仓中筛出 YES 和 NO 都持仓的 condition_id
-fn condition_ids_with_both_sides(positions: &[Position]) -> Vec<B256> {
-    let mut by_condition: HashMap<B256, HashSet<i32>> = HashMap::new();
-    for p in positions {
-        if p.size <= dec!(0) {
-            continue;
-        }
-        by_condition
-            .entry(p.condition_id)
-            .or_default()
-            .insert(p.outcome_index);
-    }
-    by_condition
-        .into_iter()
-        .filter(|(_, indices)| {
-            (indices.contains(&0) && indices.contains(&1))
-                || (indices.contains(&1) && indices.contains(&2))
-        })
-        .map(|(c, _)| c)
-        .collect()
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    // ✅ FIX: explicitly install rustls ring crypto provider
+    // 🔐 FIX rustls crypto provider (this solved your panic)
     rustls::crypto::ring::default_provider()
         .install_default()
-        .expect("failed to install rustls ring provider");
+        .expect("failed to install rustls crypto provider");
 
-    // 初始化日志
+    // logger
     utils::logger::init_logger()?;
     info!("Polymarket 5分钟套利机器人启动");
 
-    // 许可证校验
+    // license check
     poly_5min_bot::trial::check_license()?;
 
-    // 加载配置
+    // load config
     let config = Config::from_env()?;
     info!("配置加载完成");
 
-    // 初始化组件
-    let _discoverer = MarketDiscoverer::new(config.crypto_symbols.clone());
-    let _scheduler = MarketScheduler::new(_discoverer, config.market_refresh_advance_secs);
-    let _detector = ArbitrageDetector::new(config.min_profit_threshold);
+    // kill switch
+    let kill_switch = Arc::new(AtomicBool::new(config.kill_switch));
 
-    // 验证私钥格式
-    info!("正在验证私钥格式...");
-    use alloy::signers::local::LocalSigner;
-    use polymarket_client_sdk::POLYGON;
-    use std::str::FromStr;
+    // ===== market discovery =====
+    let discoverer = MarketDiscoverer::new(config.crypto_symbols.clone());
+    let scheduler = MarketScheduler::new(discoverer, config.market_refresh_advance_secs);
 
-    LocalSigner::from_str(&config.private_key)
-        .map_err(|e| anyhow::anyhow!("私钥格式无效: {}", e))?;
-    info!("私钥格式验证通过");
+    // ===== arbitrage detector =====
+    let detector = ArbitrageDetector::new(config.min_profit_threshold);
 
-    // 初始化交易执行器
-    info!("正在初始化交易执行器（需要API认证）...");
+    // ===== trading executor =====
+    info!("初始化交易执行器...");
     let executor = Arc::new(
         TradingExecutor::new(
             config.private_key.clone(),
@@ -97,31 +62,64 @@ async fn main() -> Result<()> {
         .await?,
     );
 
-    // 初始化风险管理客户端
-    info!("正在初始化风险管理客户端（需要API认证）...");
-    use polymarket_client_sdk::clob::{Client, Config as ClobConfig};
-    use polymarket_client_sdk::clob::types::SignatureType;
-    use alloy::signers::Signer;
+    // ===== risk manager =====
+    info!("初始化风险管理模块...");
+    let risk_manager = Arc::new(RiskManager::new_from_private_key(
+        &config.private_key,
+        &config,
+    ).await?);
 
-    let signer = LocalSigner::from_str(&config.private_key)?
-        .with_chain_id(Some(POLYGON));
+    let position_tracker = Arc::new(PositionTracker::new());
+    let balancer = PositionBalancer::new(
+        executor.clone(),
+        risk_manager.clone(),
+        position_tracker.clone(),
+        config.max_order_size_usdc,
+    );
 
-    let clob_cfg = ClobConfig::builder().use_server_time(true).build();
-    let mut auth = Client::new("https://clob.polymarket.com", clob_cfg)?
-        .authentication_builder(&signer);
+    let hedge_monitor = HedgeMonitor::new(
+        executor.clone(),
+        risk_manager.clone(),
+        position_tracker.clone(),
+    );
 
-    if let Some(proxy) = config.proxy_address {
-        auth = auth.funder(proxy).signature_type(SignatureType::Proxy);
-    }
+    let orderbook_monitor = OrderBookMonitor::new();
 
-    let clob_client = auth.authenticate().await?;
-    let risk_manager = Arc::new(RiskManager::new(clob_client.clone(), &config));
+    info!("✅ 所有组件初始化完成，进入交易主循环");
 
-    info!("✅ 所有组件初始化完成，进入主循环");
-
-    // ===== 主循环（保持原逻辑）=====
+    // ===== REAL TRADING LOOP =====
     loop {
-        sleep(Duration::from_secs(5)).await;
-        info!("bot running (kill switch should still be ON)");
+        // kill switch check
+        if kill_switch.load(Ordering::Relaxed) {
+            info!("🛑 kill switch ON → trading paused");
+            sleep(Duration::from_secs(5)).await;
+            continue;
+        }
+
+        // 1️⃣ get active markets
+        let markets = scheduler.get_current_markets().await?;
+        if markets.is_empty() {
+            sleep(Duration::from_secs(2)).await;
+            continue;
+        }
+
+        // 2️⃣ subscribe orderbooks
+        orderbook_monitor.subscribe(markets.clone()).await?;
+
+        // 3️⃣ detect arbitrage
+        if let Some(signal) = detector.detect(&orderbook_monitor).await {
+            info!("🚨 arbitrage opportunity detected");
+
+            // 4️⃣ risk check
+            if risk_manager.allow_trade(&signal).await {
+                executor.execute(signal).await?;
+            }
+        }
+
+        // 5️⃣ hedge & rebalance
+        hedge_monitor.check().await?;
+        balancer.rebalance().await?;
+
+        sleep(Duration::from_secs(1)).await;
     }
 }
