@@ -13,6 +13,7 @@ mod monitor;
 mod risk;
 mod trading;
 mod utils;
+mod scalp;
 
 use poly_5min_bot::merge;
 use poly_5min_bot::positions::{get_positions, Position};
