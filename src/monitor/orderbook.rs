@@ -6,7 +6,6 @@ use polymarket_client_sdk::clob::ws::{
     types::response::BookUpdate,
 };
 use polymarket_client_sdk::types::{B256, U256};
-use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::pin::Pin;
 use tracing::{debug, info};
@@ -31,16 +30,10 @@ fn short_u256(u: &U256) -> String {
     }
 }
 
-/* =======================
-   ✅ SINGLE STRUCT DEFINITION
-   ======================= */
 pub struct OrderBookMonitor {
     ws_client: WsClient,
     books: DashMap<U256, BookUpdate>,
     market_map: HashMap<B256, (U256, U256)>, // market_id -> (yes, no)
-
-    // ✅ REQUIRED FOR SCALPING
-    last_mid_price: HashMap<B256, Decimal>,
 }
 
 pub struct OrderBookPair {
@@ -55,7 +48,6 @@ impl OrderBookMonitor {
             ws_client: WsClient::default(),
             books: DashMap::new(),
             market_map: HashMap::new(),
-            last_mid_price: HashMap::new(),
         }
     }
 
@@ -94,7 +86,8 @@ impl OrderBookMonitor {
         Ok(Box::pin(stream.map(|r| r.map_err(|e| anyhow::anyhow!("{e}")))))
     }
 
-    pub fn handle_book_update(&mut self, book: BookUpdate) -> Option<OrderBookPair> {
+    /// ❗ READ-ONLY — NO MUTATION
+    pub fn handle_book_update(&self, book: BookUpdate) -> Option<OrderBookPair> {
         self.books.insert(book.asset_id, book.clone());
 
         for (market_id, (yes, no)) in &self.market_map {
@@ -126,6 +119,5 @@ impl OrderBookMonitor {
     pub fn clear(&mut self) {
         self.books.clear();
         self.market_map.clear();
-        self.last_mid_price.clear();
     }
 }
