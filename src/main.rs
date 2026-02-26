@@ -45,6 +45,8 @@ async fn main() -> Result<()> {
     info!("config loaded");
 
     // ===== SCALPING STATE (NEW) =====
+    let mut monitor = OrderBookMonitor::new();
+
     let mut scalp = ScalpState::new();
 
     let discoverer = MarketDiscoverer::new(config.crypto_symbols.clone());
