@@ -174,6 +174,14 @@ impl Config {
                 .unwrap_or_else(|_| "0.01".to_string())
                 .parse()
                 .unwrap_or(0.01), // 默认0.01
+
+            // ===== scalping (NEW) =====
+enable_scalping: env_bool("ENABLE_SCALPING", false),
+scalp_order_size_usdc: env_f64("SCALP_ORDER_SIZE_USDC", 1.0),
+scalp_take_profit_pct: env_f64("SCALP_TAKE_PROFIT_PCT", 1.0),
+scalp_stop_loss_pct: env_f64("SCALP_STOP_LOSS_PCT", 0.5),
+scalp_max_hold_seconds: env_u64("SCALP_MAX_HOLD_SECONDS", 90),
+max_trades_per_day: env_u32("MAX_TRADES_PER_DAY", 5),
         })
     }
 }
