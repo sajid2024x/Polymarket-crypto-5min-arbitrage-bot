@@ -5,6 +5,7 @@ edition = "2021"
 default-run = "poly_5min_bot"
 
 [dependencies]
+ctor = "0.2"
 polymarket-client-sdk = { version = "0.4.3", features = ["clob", "ctf", "data", "gamma", "ws", "tracing"] }
 
 tokio = { version = "1.49", features = ["full"] }
