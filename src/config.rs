@@ -66,6 +66,14 @@ pub struct Config {
     pub wind_down_before_window_end_minutes: u64,
     /// 收尾时单腿卖出的限价单价格（尽量快速成交），默认0.01
     pub wind_down_sell_price: f64,
+
+        // ===== scalping (NEW) =====
+    pub enable_scalping: bool,
+    pub scalp_order_size_usdc: f64,
+    pub scalp_take_profit_pct: f64,
+    pub scalp_stop_loss_pct: f64,
+    pub scalp_max_hold_seconds: u64,
+    pub max_trades_per_day: u32,
 }
 
 impl Config {
