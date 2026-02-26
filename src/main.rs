@@ -101,6 +101,11 @@ async fn main() -> Result<()> {
                     match msg {
                         Some(Ok(book)) => {
                             if let Some(pair) = monitor.handle_book_update(book) {
+                                scalp.detect(
+    pair.market_id,
+    &pair.yes_book,
+    dec!(0.002), // 0.2% move
+);
 
                                 // ===== SCALPING SIGNAL (NEW) =====
                                 if config.enable_scalping {
