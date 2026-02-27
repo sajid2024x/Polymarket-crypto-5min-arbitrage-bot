@@ -209,6 +209,9 @@ async fn main() -> Result<()> {
     let _scheduler = MarketScheduler::new(_discoverer, config.market_refresh_advance_secs);
     let _detector = ArbitrageDetector::new(config.min_profit_threshold);
     
+    // ---------- SCALP STATE ----------
+let mut scalp_state = Some(ScalpState::new());
+    
     // 验证私钥格式
     info!("正在验证私钥格式...");
     use alloy::signers::local::LocalSigner;
