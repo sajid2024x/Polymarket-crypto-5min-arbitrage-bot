@@ -67,7 +67,10 @@ async fn main() -> Result<()> {
     executor.verify_authentication().await?;
     info!("auth verified");
 
-    let risk_manager = Arc::new(RiskManager::new_from_config(&config).await?);
+   let risk_manager = Arc::new(RiskManager::new(
+    clob_client.clone(),
+    &config,
+));
 
     let position_balancer = Arc::new(PositionBalancer::new(
         risk_manager.clone(),
