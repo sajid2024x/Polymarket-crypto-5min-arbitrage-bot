@@ -75,10 +75,11 @@ async fn main() -> Result<()> {
 
     let position_tracker = risk_manager.position_tracker();
 
-    let position_balancer = Arc::new(PositionBalancer::new(
-        risk_manager.clone(),
-        &config,
-    ));
+  let position_balancer = Arc::new(PositionBalancer::new(
+    clob_client.clone(),
+    position_tracker.clone(),
+    &config,
+));
 
     let wind_down_in_progress = Arc::new(AtomicBool::new(false));
 
