@@ -1,5 +1,6 @@
 use rustls::crypto::ring;
 use rust_decimal::prelude::FromPrimitive;
+use polymarket_client_sdk::clob::{Client, Config as ClobConfig};
 
 #[ctor::ctor]
 fn install_rustls_provider() {
@@ -43,12 +44,7 @@ async fn main() -> Result<()> {
 
     let config = Config::from_env()?;
 use polymarket_client_sdk::clob::Client;
-use polymarket_client_sdk::auth::Auth;
-use polymarket_client_sdk::auth::state::Normal;
 
-let auth = Auth::from_private_key(&config.private_key)?;
-let clob_client = Client::new(auth)?;
-    
     info!("config loaded");
 
     // ===== SCALPING STATE (NEW) =====
