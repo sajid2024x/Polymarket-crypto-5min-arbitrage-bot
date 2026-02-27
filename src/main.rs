@@ -1,6 +1,4 @@
 use rustls::crypto::ring;
-use crate::scalp::ScalpState;
-use rust_decimal::Decimal;
 
 #[ctor::ctor]
 fn install_rustls_provider() {
