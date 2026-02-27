@@ -34,7 +34,6 @@ use crate::market::{MarketDiscoverer, MarketInfo, MarketScheduler};
 use crate::monitor::{ArbitrageDetector, OrderBookMonitor};
 use crate::risk::{RiskManager, PositionBalancer, HedgeMonitor};
 use crate::trading::TradingExecutor;
-use crate::scalp::ScalpState;
 
 #[tokio::main]
 async fn main() -> Result<()> {
