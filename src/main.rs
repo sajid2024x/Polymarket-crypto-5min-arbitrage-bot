@@ -94,6 +94,7 @@ async fn main() -> Result<()> {
 
         let mut stream = monitor.create_orderbook_stream()?;
         info!("📡 monitoring orderbooks");
+        let mut scalp = ScalpState::new();
 
         loop {
             tokio::select! {
