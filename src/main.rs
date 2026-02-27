@@ -596,6 +596,16 @@ async fn main() -> Result<()> {
                         Some(Ok(book)) => {
                             // 然后处理订单簿更新（book会被move）
                             if let Some(pair) = monitor.handle_book_update(book) {
+                                
+// ---- SCALP HOOK (NON-BLOCKING) ----
+if let Some(ref mut scalp_state) = scalp_state {
+    scalp_state.on_orderbook(
+        pair.market_id,
+        &pair.yes_book,
+        &pair.no_book,
+    );
+}
+                                
                                 // 注意：asks 最后一个为卖一价
                                 let yes_best_ask = pair.yes_book.asks.last().map(|a| (a.price, a.size));
                                 let no_best_ask = pair.no_book.asks.last().map(|a| (a.price, a.size));
