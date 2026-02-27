@@ -43,6 +43,13 @@ async fn main() -> Result<()> {
     info!("🚀 bot starting");
 
     let config = Config::from_env()?;
+    let clob_config = ClobConfig {
+    host: config.polymarket_host.clone(),
+    private_key: Some(config.private_key.clone()),
+    ..Default::default()
+};
+
+let clob_client = Client::new(&config.polymarket_host, clob_config)?;
 use polymarket_client_sdk::clob::Client;
 
     info!("config loaded");
