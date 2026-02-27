@@ -1,4 +1,5 @@
 use rustls::crypto::ring;
+use rust_decimal::prelude::FromPrimitive;
 
 #[ctor::ctor]
 fn install_rustls_provider() {
