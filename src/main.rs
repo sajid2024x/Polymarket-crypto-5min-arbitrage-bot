@@ -598,7 +598,22 @@ let mut scalp_state = Some(ScalpState::new());
                     match book_result {
                         Some(Ok(book)) => {
                             // 然后处理订单簿更新（book会被move）
-                            if let Some(pair) = monitor.handle_book_update(book) {
+                            if let Some(pair) = monitor.handle_book_update(book) 
+                            { if let Some(pair) = monitor.handle_book_update(book) {
+
+    // ---------- SCALPING ----------
+    if let Some(ref mut scalp_state) = scalp_state {
+        scalp_state.on_orderbook(
+            pair.market_id,
+            &pair.yes_book,
+            &pair.no_book,
+        );
+    }
+
+    // existing arbitrage / logging code continues here
+}
+
+                                
                                 
 // ---- SCALP HOOK (NON-BLOCKING) ----
 if let Some(ref mut scalp_state) = scalp_state {
