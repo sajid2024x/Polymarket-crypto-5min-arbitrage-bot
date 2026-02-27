@@ -1,4 +1,6 @@
 use rustls::crypto::ring;
+use crate::scalp::ScalpState;
+use rust_decimal::Decimal;
 
 #[ctor::ctor]
 fn install_rustls_provider() {
@@ -37,6 +39,7 @@ use crate::monitor::{ArbitrageDetector, OrderBookMonitor};
 use crate::risk::positions::PositionTracker;
 use crate::risk::{HedgeMonitor, PositionBalancer, RiskManager};
 use crate::trading::TradingExecutor;
+use crate::scalp::ScalpState;
 
 /// 从持仓中筛出 **YES 和 NO 都持仓** 的 condition_id，仅这些市场才能 merge；单边持仓直接跳过。
 /// Data API 可能返回 outcome_index 0/1（0=Yes, 1=No）或 1/2（与 CTF index_set 一致），两种都支持。
