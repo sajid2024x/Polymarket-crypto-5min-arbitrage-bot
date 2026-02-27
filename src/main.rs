@@ -73,6 +73,8 @@ async fn main() -> Result<()> {
     &config,
 ));
 
+    let position_tracker = risk_manager.position_tracker();
+
     let position_balancer = Arc::new(PositionBalancer::new(
         risk_manager.clone(),
         &config,
